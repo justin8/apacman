@@ -482,7 +482,12 @@ rpcinfo() {
 
 pkglink() {
   rpcinfo $1
-  echo "${PKGURL}$(jshon -Q -e results -a -e URLPath -u < "$tmpdir/$1.info")"
+  OUT="$(jshon -Q -e results -a -e URLPath -u < "$tmpdir/$1.info")"
+  if [[ $OUT ]]; then
+    echo "${PKGURL}${OUT}"
+  else
+    return 1
+  fi
 }
 
 absrepo() {
@@ -521,8 +526,13 @@ abslink() {
 
 # downloads pkgbuild ($1), edits if $2 is set
 pkginfo() {
-  if ! [[ -f "$tmpdir/$1.PKGBUILD" ]]; then
+  local pkgpath
+  local basepath
+  if ! [[ -f "$tmpdir/$1.PKGBUILD" ]] && existsinaur "$1"; then
     pkgpath=$(pkglink $1)
+    if [[ ! $pkgpath ]]; then
+      return 1
+    fi
     basepath=$(echo ${pkgpath##*/} | awk -F . '{print $1}')
     if [[ $legacy == 1 ]]; then
       curl -Lfs "${pkgpath%/*}/PKGBUILD" > "$tmpdir/$1.PKGBUILD"
